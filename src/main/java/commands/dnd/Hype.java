@@ -8,32 +8,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Hype extends DndCommand {
-    @Override
-    public List<String> getParameterNames() {
-        return new ArrayList<>();
-    }
 
     @Override
-    public List<Class> getParameterTypes() {
-        return new ArrayList<>();
-    }
-
-    @Override
-    protected String run(List<Object> parameters) {
+    public void run() {
         Workspace workspace = getWorkspace();
 
         if (workspace.getNextDndHang() == null) {
-            return "Can't hype when there's no next D&D häng :(";
+            sendBack("Can't hype when there's no next D&D häng :(");
         } else if (workspace.getNextDndHang().isBefore(MonthDay.now())) {
-            return workspace.getNextDndHang().toString() + " must have been a good D&D session!!";
+            sendBack(workspace.getNextDndHang().toString() + " must have been a good D&D session!!");
         } else {
-            User user = getCurrentQuery().getAuthor().block();
+            User user = context.user;
 
             if (user != null) {
                 workspace.getHypedPeople().add(user.getUsername());
-                return user.getMention() + " has hyped for the next session!! " + Responses.bigStuff();
+                sendBack(user.getMention() + " has hyped for the next session!! " + Responses.bigStuff());
             } else {
-                return "WHoa there, that username is impossible for me to read. Well played!";
+                sendBack("WHoa there, that username is impossible for me to read. Well played!");
             }
         }
     }

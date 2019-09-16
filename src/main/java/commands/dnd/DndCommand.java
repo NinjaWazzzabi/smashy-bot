@@ -1,20 +1,12 @@
 package commands.dnd;
 
-import commands.Command;
+import commands.AbstractCommand;
 import lombok.Getter;
 import java.util.Map;
 
-public abstract class DndCommand extends Command {
+public abstract class DndCommand extends AbstractCommand {
 
     @Getter
     private static Workspace workspace = new Workspace();
 
-    @Getter
-    private static Map<String, DndCommand> commandMap = initCommandMap();
-
-    static Map<String, DndCommand> initCommandMap() {
-        Map<String, DndCommand> stringCommandMap = initCommandMap(DndCommand.class);
-        stringCommandMap.values().forEach(it -> workspace.getCommandList().add(it));
-        return stringCommandMap;
-    }
 }

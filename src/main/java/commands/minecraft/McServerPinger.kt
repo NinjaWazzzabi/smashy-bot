@@ -39,12 +39,13 @@ class McServerPinger(val ip: String, val port: Int = 25565) {
         val pingOptions = MinecraftPingOptions()
         pingOptions.hostname = ip
         pingOptions.port = port
-        pingOptions.timeout = TIMEOUT_LENGTH
+//        pingOptions.timeout = TIMEOUT_LENGTH
         onlineStatus = try {
             val pingResult = MinecraftPing().getPing(pingOptions)
             lastInfo = pingResult
             pingResult.description.text.contains("Collaide")
         } catch (e : IOException) {
+            e.printStackTrace()
             false
         }
     }

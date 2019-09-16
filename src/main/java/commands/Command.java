@@ -96,25 +96,6 @@ public abstract class Command {
                 .collect(Collectors.toList());
     }
 
-
-    protected static <T extends Command> Map<String, T> initCommandMap(Class<T> superCommand) {
-        Map<String, T> commandMap = new HashMap<>();
-
-        Reflections reflections = new Reflections(Command.class.getPackage().getName());
-        Set<Class<? extends T>> commandClasses = reflections.getSubTypesOf(superCommand);
-
-        for (Class<? extends T> aClass : commandClasses) {
-            try {
-                T command = aClass.getConstructor().newInstance();
-                commandMap.put(command.getCommandName(), command);
-            } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
-                e.printStackTrace();
-            }
-        }
-
-        return commandMap;
-    }
-
     protected static <T> List<T> toList(T ... ts) {
         return new ArrayList<>(Arrays.asList(ts));
     }

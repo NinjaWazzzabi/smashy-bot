@@ -1,10 +1,22 @@
 package commands.minecraft;
 
+import user.Powerlevel;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
 public class SetServer extends MinecraftCommand {
+
+    @Override
+    public Powerlevel requiredLevel() {
+        return Powerlevel.ADMIN;
+    }
+
+    private final String ip;
+    public SetServer(String ip) {
+        this.ip = ip;
+    }
 
     private static final int DEFAULT_MC_PORT = 25565;
 
@@ -25,27 +37,16 @@ public class SetServer extends MinecraftCommand {
                                         + "[0-9]{1,5}$"); // Port
 
     @Override
-    public List<String> getParameterNames() {
-        return toList("IP");
-    }
-
-    @Override
-    public List<Class> getParameterTypes() {
-        return toList(String.class);
-    }
-
-    @Override
-    protected String run(List<Object> parameters) {
-        String ip = (String) parameters.get(0);
+    public void run() {
         if (ip.contains(":") && completePattern.matcher(ip).matches()) {
             String[] split = ip.split(":");
-            setServerPinger(new McServerPinger(split[0], Integer.valueOf(split[1])));
-            return "Server set to: " + ip;
+//            setServerPinger(new McServerPinger(split[0], Integer.valueOf(split[1])));
+            sendBack("Server set to: " + ip);
         } else if (addressPattern.matcher(ip).matches()) {
-            setServerPinger(new McServerPinger(ip, DEFAULT_MC_PORT));
-            return "Server set to: " + ip;
+//            setServerPinger(new McServerPinger(ip, DEFAULT_MC_PORT));
+            sendBack("Server set to: " + ip);
         } else {
-            return "Error: bad formatting. Either *IP:PORT* or only *IP*";
+            sendBack("Error: bad formatting. Either *IP:PORT* or only *IP*");
         }
     }
 }

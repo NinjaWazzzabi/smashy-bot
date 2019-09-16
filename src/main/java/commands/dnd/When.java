@@ -6,29 +6,18 @@ import java.util.List;
 
 public class When extends DndCommand {
 
-    // TODO: 09/02/2019 Read fields names and types instead of returning lists? Easier and no type casting!
+    // TODO: 09/02/2019 Read fields names and types instead of returning lists? Easier and no type casting! Ehh, maybe later
 
     @Override
-    public List<String> getParameterNames() {
-        return new ArrayList<>();
-    }
-
-    @Override
-    public List<Class> getParameterTypes() {
-        return new ArrayList<>();
-    }
-
-    @Override
-    protected String run(List<Object> parameters) {
-
+    public void run() {
         MonthDay nextDndHang = getWorkspace().getNextDndHang();
 
         if (nextDndHang == null) {
-            return "No D&D häng has been set! **This is outrageous!**";
+            sendBack("No D&D häng has been set! **This is outrageous!**");
         } else if (nextDndHang.isBefore(MonthDay.now())) {
-            return "Last D&D häng was on " + nextDndHang.toString() + ". I belive it's time for a new one!";
+            sendBack("Last D&D häng was on " + nextDndHang.toString() + ". I belive it's time for a new one!");
         } else {
-            return "Next D&D häng will be on " + nextDndHang.toString();
+            sendBack("Next D&D häng will be on " + nextDndHang.toString());
         }
     }
 }

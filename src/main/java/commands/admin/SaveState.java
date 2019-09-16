@@ -1,34 +1,18 @@
 package commands.admin;
 
 import commands.dnd.DndCommand;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import user.Powerlevel;
 
 public class SaveState extends AdminCommand {
 
-
     @Override
-    public List<String> getParameterNames() {
-        return new ArrayList<>();
+    public Powerlevel requiredLevel() {
+        return Powerlevel.GOD;
     }
 
     @Override
-    public List<Class> getParameterTypes() {
-        return new ArrayList<>();
-    }
-
-    @Override
-    protected String runAdmMode(List<Object> parameters) {
+    public void run() {
         DndCommand.getWorkspace().saveToFile();
-//        try {
-//            DndCommand.getWorkspace().saveToFile();
-//            return "State saved!";
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            return "ERROR: couldn't save file, check stacktrace for more information!";
-//        }
-        return "saved";
+        sendBack("Saved state");
     }
 }

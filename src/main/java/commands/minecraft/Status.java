@@ -8,32 +8,23 @@ import java.util.stream.IntStream;
 
 public class Status extends MinecraftCommand {
 
-    @Override
-    public List<String> getParameterNames() {
-        return toList();
-    }
 
     @Override
-    public List<Class> getParameterTypes() {
-        return toList();
-    }
-
-    @Override
-    protected String run(List<Object> parameters) {
+    public void run() {
         if (getServerPinger().isPresent()) {
             McServerPinger server = MinecraftCommand.getServerPinger().get();
             if (server.isOnline()) {
                 MinecraftPingReply serverInfo = server.getServerInfo();
                 if (serverInfo != null) {
-                    return formatStatus(serverInfo);
+                    sendBack(formatStatus(serverInfo));
                 } else {
-                    return "Server is online! Info is not available.";
+                    sendBack("Server is online! Info is not available.");
                 }
             } else {
-                return "Server of " + server.getIp() + " is offline :(";
+                sendBack("Server of " + server.getIp() + " is offline :(");
             }
         } else {
-            return "Server ip not set";
+            sendBack("Server ip not set");
         }
     }
 

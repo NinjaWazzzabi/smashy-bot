@@ -1,78 +1,121 @@
-import commands.Command;
-import commands.admin.AdminCommand;
-import commands.dnd.DndCommand;
-import commands.minecraft.MinecraftCommand;
+import commands.*;
+import database.Database;
+import database.MockDatabase;
 import discord4j.core.DiscordClient;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.Message;
-import discord4j.core.object.entity.MessageChannel;
 import discord4j.core.object.entity.User;
-import discord4j.core.object.util.Snowflake;
-import reactor.core.publisher.Flux;
 import reactor.util.Loggers;
 import utils.PersistentData;
 import utils.Responses;
 import utils.Tuple;
 
-import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class Main {
 
     private static final String MC_CH_ID = "617727734210363403";
+    private final User self;
+    private final DiscordClient client;
+    private final CommandDatabase commandDatabase;
+    private final Database database;
+    private final CommandRunner commandRunner;
 
-    private final Map<String, Map<String, ? extends Command>> tagMap = new HashMap<>();
+//    private final Map<String, Map<String, ? extends Command>> tagMap = new HashMap<>();
 
     public Main(DiscordClient client) {
-        User self = client.getSelf().block();
-        tagMap.put("!dnd", DndCommand.getCommandMap());
-        tagMap.put("!adm", AdminCommand.getCommandMap());
-        tagMap.put("!mc", MinecraftCommand.getCommandMap());
-
-//        MinecraftCommand.setMcChannelCallback(Optional.of(s -> {
-//            ((MessageChannel) client.getChannelById(Snowflake.of(MC_CH_ID)).block()).createMessage(s);
-//        }));
-
-        DndCommand.getWorkspace().loadFromFile();
-        new Thread(() -> {
-            while (true) {
-                try {
-                    Thread.sleep(1000 * 60);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-                DndCommand.getWorkspace().saveToFile();
-                System.out.println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + ": Saved state");
-            }
-        }).start();
-
+        this.client = client;
+        self = client.getSelf().block();
+        commandDatabase = new CommandDatabase();
+        database = new MockDatabase();
+        commandRunner = new CommandRunner(database, new CommandBuilder());
 
         // Pair every message with it's corresponding tag (First word)
-        Flux<Tuple<String, Message>> tagPairs = client.getEventDispatcher().on(MessageCreateEvent.class)
+//        Flux<Tuple<String, Message>> tagPairs = client.getEventDispatcher().on(MessageCreateEvent.class)
+//                .map(MessageCreateEvent::getMessage)
+//                .filter(message -> !self.equals(message.getAuthor().block()))
+//                .map(message -> new Tuple<>(message.getContent().orElse("").trim().split("[ ]++")[0], message));
+//
+//        // Run all known command tags (ex: !dnd or !adm)
+//        tagPairs.filter(tuple -> tagMap.containsKey(tuple.fst()))
+//                .map(tuple -> new Tuple<>(matchCommand(tuple.snd(), tagMap.get(tuple.fst())), tuple.snd()))
+//                .flatMap(tuple -> tuple.snd().getChannel().flatMap(
+//                        messageChannel -> messageChannel.createMessage(tuple.fst())
+//                )).subscribe();
+//
+//        // See if there's something to respond with to non-commands
+//        tagPairs.filter(tuple -> !tagMap.containsKey(tuple.fst()))
+//                .map(tuple -> new Tuple<>(randomInput(tuple.snd()), tuple.snd()))
+//                .filter(tuple -> tuple.fst().length() > 0)
+//                .flatMap(tuple -> tuple.snd().getChannel().flatMap(
+//                        messageChannel -> messageChannel.createMessage(tuple.fst())
+//                )).subscribe();
+
+        // TODO: 17/09/2019 No anti swearing and stuff rn :(
+
+        client.getEventDispatcher()
+                .on(MessageCreateEvent.class)
                 .map(MessageCreateEvent::getMessage)
-                .filter(message -> !self.equals(message.getAuthor().block()))
-                .map(message -> new Tuple<>(message.getContent().orElse("").trim().split("[ ]++")[0], message));
-
-        // Run all known command tags (ex: !dnd or !adm)
-        tagPairs.filter(tuple -> tagMap.containsKey(tuple.fst()))
-                .map(tuple -> new Tuple<>(matchCommand(tuple.snd(), tagMap.get(tuple.fst())), tuple.snd()))
-                .flatMap(tuple -> tuple.snd().getChannel().flatMap(
-                        messageChannel -> messageChannel.createMessage(tuple.fst())
-                )).subscribe();
-
-        // See if there's something to respond with to non-commands
-        tagPairs.filter(tuple -> !tagMap.containsKey(tuple.fst()))
-                .map(tuple -> new Tuple<>(randomInput(tuple.snd()), tuple.snd()))
-                .filter(tuple -> tuple.fst().length() > 0)
-                .flatMap(tuple -> tuple.snd().getChannel().flatMap(
-                        messageChannel -> messageChannel.createMessage(tuple.fst())
-                )).subscribe();
+                .map(it -> new Tuple<>(findCommand(it), createContext(it)))
+                .filter(it -> it.fst().isPresent() && it.snd().isPresent())
+                .map(it -> new Tuple<>(it.fst().get(), it.snd().get()))
+                .toIterable()
+//                .forEach(t -> System.out.println(t.fst().getName()));
+                .forEach(t -> commandRunner.runCommand(t.fst(), t.snd()));
     }
+
+    private Optional<CommandPrototype> findCommand(Message message) {
+        String queryContent = message.getContent().orElse("").trim();
+        String[] parts = queryContent.split("[ ,]++");
+
+        if (parts.length >= 2) {
+            String commandGroup = parts[0];
+            String commandName = parts[1];
+
+            return commandDatabase.getUnbuiltCommand(commandGroup, commandName);
+        } else {
+            return Optional.empty();
+        }
+    }
+
+    private Optional<Context> createContext(Message message) {
+        User author = message.getAuthor().block();
+
+        if (author == null) {
+            return Optional.empty();
+        }
+        Optional<Context> context = Optional.of(new Context(
+                message,
+                author,
+                database.getBotUser(author),
+                message.getChannel().block(),
+                message.getGuild().block()
+        ));
+        return context;
+    }
+
+//    private Optional<CommandPrototype> matchCommand(Message query, Set<CommandPrototype> commandSet) {
+//        Command.setCurrentQuery(query);
+//        String queryContent = query.getContent().orElse("").trim();
+//        queryContent = queryContent.substring(queryContent.split(" ")[0].length()).trim();
+//
+//        if (queryContent.length() > 0) {
+//            String[] split = queryContent.split("[ ,]++");
+//            System.out.println(split[0]);
+//
+//            if (commandSet.containsKey(split[0])) {
+//                return commandSet.get(split[0])
+//                        .runCommand(Arrays.stream(split).filter(s -> !split[0].equals(s)).toArray(String[]::new));
+//            } else {
+//                return Responses.unknownCommand();
+//            }
+//        } else {
+//            return Responses.identification();
+//        }
+//    }
 
     private String randomInput(Message query) {
         String input = query.getContent().orElse("").toLowerCase();
@@ -110,26 +153,6 @@ public class Main {
         }
 
         return "";
-    }
-
-    private String matchCommand(Message query, Map<String, ? extends Command> commandMap) {
-        Command.setCurrentQuery(query);
-        String queryContent = query.getContent().orElse("").trim();
-        queryContent = queryContent.substring(queryContent.split(" ")[0].length()).trim();
-
-        if (queryContent.length() > 0) {
-            String[] split = queryContent.split("[ ,]++");
-            System.out.println(split[0]);
-
-            if (commandMap.containsKey(split[0])) {
-                return commandMap.get(split[0])
-                        .runCommand(Arrays.stream(split).filter(s -> !split[0].equals(s)).toArray(String[]::new));
-            } else {
-                return Responses.unknownCommand();
-            }
-        } else {
-            return Responses.identification();
-        }
     }
 
     private boolean isInsulted(String content) {

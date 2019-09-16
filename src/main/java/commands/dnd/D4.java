@@ -5,19 +5,10 @@ import java.util.List;
 import java.util.Random;
 
 public class D4 extends DndCommand {
-    @Override
-    public List<String> getParameterNames() {
-        return new ArrayList<>();
-    }
 
     @Override
-    public List<Class> getParameterTypes() {
-        return new ArrayList<>();
-    }
-
-    @Override
-    protected String run(List<Object> parameters) {
+    public void run() {
         Random random = new Random();
-        return "Rolled: " + (random.nextInt(4) + 1);
+        sendBack("Rolled: " + (random.nextInt(4) + 1));
     }
 }
